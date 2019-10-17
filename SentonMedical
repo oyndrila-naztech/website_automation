@@ -1,0 +1,140 @@
+package io.naztech.redash.test;
+
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Set;
+
+import org.apache.logging.log4j.CloseableThreadContext.Instance;
+import org.apache.poi.ss.usermodel.Cell;
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.xssf.usermodel.XSSFCell;
+import org.apache.poi.xssf.usermodel.XSSFRow;
+import org.apache.poi.xssf.usermodel.XSSFSheet;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.junit.After;
+import org.junit.Test;
+import org.openqa.selenium.By;
+import org.openqa.selenium.WebElement;
+import org.openqa.selenium.chrome.ChromeDriver;
+import org.openqa.selenium.remote.BrowserType;
+
+import lombok.var;
+
+public class TestSetonMedical {
+
+	public ChromeDriver driver;
+	int orgcount = 0;
+	@Test
+	public void SlctHptalName() throws IOException, InterruptedException {
+		System.setProperty("webdriver.chrome.driver", "webdrivers/chromedriver-76.exe");
+		driver = new ChromeDriver();
+		driver.get("https://www.hospitalsafetygrade.org/");
+		 String originalHandle = driver.getWindowHandle();
+		driver.manage().window().setSize(new org.openqa.selenium.Dimension(1300, 720));
+		driver.findElementByXPath("//*[@id=\"findBy\"]/option[. = 'Search by Hospital']").click();
+		ReadExcel();
+
+	}
+	
+	@After
+	public void stop() {
+		driver.quit();
+	}
+
+	public void ReadExcel() throws IOException, InterruptedException
+
+	{
+		int secondColumn = 1;
+
+		String filename = "Hospital List.xlsx";
+
+		File file = new File("C:\\Users\\oyndrila.chowdhury\\Desktop\\RPA Project" + "\\" + filename);
+
+		FileInputStream inputStream = new FileInputStream(file);
+		Workbook workbook = new XSSFWorkbook(inputStream);
+		Sheet sheetname = workbook.getSheet("Sheet1");
+		int rowCount = sheetname.getLastRowNum() - sheetname.getFirstRowNum();
+		for (int i = 1; i <= rowCount; i++) {
+			Row row = sheetname.getRow(i);
+			String hptalname = row.getCell(1).getStringCellValue();
+			driver.findElementByXPath("//*[@id=\"hospitalname\"]").sendKeys(hptalname);
+			driver.findElementByXPath("//*[@id='SearchButton']").click();
+			Thread.sleep(5000);
+
+
+			CheckExists();
+		}
+
+	}
+	public void CheckExists() throws InterruptedException, IOException
+	{
+		String hptalfound = driver.findElementByXPath("//*[@id=\"SearchResults\"]/div[1]/p").getText();
+		if(hptalfound=="0 hospitals found")
+		{
+			driver.navigate().back();
+		}
+		else
+		{	
+			FullScore(orgcount);
+			
+		}
+	}
+
+	public void FullScore(int orgcount) throws InterruptedException, IOException {
+		int i = 0, j = 0;
+		driver.findElementByXPath("//*[@id=\"SearchResults\"]/div[3]/div/div[1]/div[3]/a").click();
+		driver.findElementByXPath("//*[@id=\"SearchResults\"]/div[1]/div/div[3]/p/a").click();
+		Thread.sleep(5000);
+		Set<String> tab_handles = driver.getWindowHandles();
+		int number_of_tabs = tab_handles.size();
+		int new_tab_index = number_of_tabs - 1;
+		driver.switchTo().window(tab_handles.toArray()[new_tab_index].toString());
+		FileInputStream fis = new FileInputStream("C:\\Users\\oyndrila.chowdhury\\Desktop\\read_excel.xlsx");
+		FileOutputStream fos = null;
+		XSSFWorkbook workbook = new XSSFWorkbook(fis);
+		XSSFSheet setsheet = workbook.createSheet();
+		XSSFRow exrow = null;
+		XSSFCell excell = null;
+		for(int table=1;table<=2;table++) {
+		WebElement reportsummary = driver.findElementByXPath("//*[@id=\"TableView\"]/table[" +table+ "]/tbody");
+
+		List<WebElement> allrows = reportsummary.findElements(By.tagName("tr"));
+
+		for (WebElement row : allrows) {
+			System.out.println(i + " " + j);
+			Row row1 = setsheet.createRow(i);
+			List<WebElement> cells = row.findElements(By.tagName("td"));
+			j = 0;
+			for (WebElement cell : cells) {
+				System.out.println(cell.getText());
+				row1.createCell(j).setCellValue(cell.getText());
+				System.out.println(i + " " + j);
+				j++;
+
+			}
+			i++;
+
+		}
+		
+		i--;
+		
+		}
+		fos = new FileOutputStream("C:\\Users\\oyndrila.chowdhury\\Desktop\\read_excel.xlsx");
+		workbook.write(fos);
+		fos.close();
+		orgcount++;
+		
+		
+		
+		
+		
+	}
+
+}
